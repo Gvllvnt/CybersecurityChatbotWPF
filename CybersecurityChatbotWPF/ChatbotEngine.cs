@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Chatbot wngine handles all the logic and sentiment
+using System;
 using System.Collections.Generic;
 
 namespace CybersecurityChatbotWPF
