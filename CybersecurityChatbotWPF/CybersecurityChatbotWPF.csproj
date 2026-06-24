@@ -104,9 +104,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ActivityLogger.cs" />
     <Compile Include="ChatbotEngine.cs" />
     <Compile Include="DatabaseHelper.cs" />
     <Compile Include="KeywordResponses.cs" />
+    <Compile Include="QuizManager.cs" />
     <Compile Include="SentimentAnalyzer.cs" />
     <Compile Include="TaskManager.cs" />
     <Page Include="MainWindow.xaml">
