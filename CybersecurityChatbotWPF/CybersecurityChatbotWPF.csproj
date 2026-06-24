@@ -108,6 +108,7 @@
     <Compile Include="DatabaseHelper.cs" />
     <Compile Include="KeywordResponses.cs" />
     <Compile Include="SentimentAnalyzer.cs" />
+    <Compile Include="TaskManager.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
