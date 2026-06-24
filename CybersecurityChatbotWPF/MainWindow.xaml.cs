@@ -1,4 +1,5 @@
-﻿using System;
+﻿//WPF GUI for Cybersec chatbot
+using System;
 using System.Media;
 using System.Windows;
 using System.Windows.Controls;
