@@ -44,30 +44,12 @@ namespace CybersecurityChatbotWPF
                         currentTopic = topic;
                         memory.Remember("topic", topic);
                         string topicName = topic == "phish" ? "phishing" : topic;
-                        return $"Great! I'll remember that you're interested in {topicName}. Let me share some tips with you.";
+                        return $"Great! I'll remember that you're interested in {topicName}. Here are some tips: {GetKeywordResponse(topic)}";
                     }
                 }
             }
 
-            // Sentiment detection
-            SentimentAnalyzer.Sentiment detectedSentiment = sentiment.DetectSentiment(input);
-            if (detectedSentiment != SentimentAnalyzer.Sentiment.Neutral)
-            {
-                string topic = memory.Recall("topic") ?? "cybersecurity";
-                return sentiment.GetEmpatheticResponse(detectedSentiment, topic);
-            }
-
-            // Check for follow-up questions
-            if (lower.Contains("another") || lower.Contains("more") || lower.Contains("tell me more") || lower.Contains("explain"))
-            {
-                if (!string.IsNullOrEmpty(currentTopic))
-                {
-                    return keywords.GetRandomResponse(currentTopic) + " Would you like to hear more?";
-                }
-                return "I'd love to help! What topic would you like to know more about? (passwords, phishing, privacy, scams, or safe browsing)";
-            }
-
-            // Keyword recognition
+            // KEYWORD RECOGNITION - MOVED BEFORE SENTIMENT
             if (keywords.HasKeyword(input))
             {
                 string response = keywords.GetRandomResponse(input);
@@ -83,10 +65,43 @@ namespace CybersecurityChatbotWPF
                 }
             }
 
+            // SENTIMENT DETECTION - MOVED AFTER KEYWORDS
+            SentimentAnalyzer.Sentiment detectedSentiment = sentiment.DetectSentiment(input);
+            if (detectedSentiment != SentimentAnalyzer.Sentiment.Neutral)
+            {
+                string topic = memory.Recall("topic") ?? "cybersecurity";
+                string tip = string.IsNullOrEmpty(currentTopic) ? "" : $" Here's a tip: {GetKeywordResponse(currentTopic)}";
+                return sentiment.GetEmpatheticResponse(detectedSentiment, topic) + tip;
+            }
+
+            // Check for follow-up questions
+            if (lower.Contains("another") || lower.Contains("more") || lower.Contains("tell me more") || lower.Contains("explain"))
+            {
+                if (!string.IsNullOrEmpty(currentTopic))
+                {
+                    return keywords.GetRandomResponse(currentTopic) + " Would you like to hear more?";
+                }
+                return "I'd love to help! What topic would you like to know more about? (passwords, phishing, privacy, scams, or safe browsing)";
+            }
+
             // Default response
             return "I'm not sure I understand. You can ask me about passwords, phishing, privacy, scams, or safe browsing. What would you like to know?";
         }
-
+        private string GetKeywordResponse(string keyword)
+        {
+            string lower = keyword.ToLower();
+            if (lower.Contains("password"))
+                return "Use strong, unique passwords with letters, numbers, and symbols!";
+            if (lower.Contains("phish"))
+                return "Never click on suspicious links in emails or SMS. Always check the sender!";
+            if (lower.Contains("privacy"))
+                return "Review your privacy settings and limit what you share publicly.";
+            if (lower.Contains("scam"))
+                return "If it sounds too good to be true, it probably is. Take time to verify!";
+            if (lower.Contains("brows"))
+                return "Look for 'https://' and the padlock icon before entering personal info.";
+            return "Stay safe online by being cautious and informed!";
+        }
         public string GetInitialGreeting()
         {
             if (memory.HasMemory("name"))
