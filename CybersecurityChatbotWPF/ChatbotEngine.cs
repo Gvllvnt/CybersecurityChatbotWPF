@@ -24,13 +24,29 @@ namespace CybersecurityChatbotWPF
             conversationHistory.Add(input);
             string lower = input.ToLower();
 
-            // === NLP: Intent Recognition ===
+            // ===== QUIZ CHECK =====
+            if (quizManager.IsQuizActive())
+            {
+                // If it's a number, short answer, or single word
+                string trimmed = input.Trim();
+                if (int.TryParse(trimmed, out int num) || trimmed.Length <= 8)
+                {
+                    string result = quizManager.SubmitAnswer(input);
+                    // If the result contains "Incorrect" or "Correct", it's a quiz answer
+                    if (result.Contains("Correct") || result.Contains("Incorrect") || result.Contains("Please enter"))
+                    {
+                        return result;
+                    }
+                }
+            }
 
-            // 1. QUIZ INTENT
+            // Check for quiz start command
             if (lower.Contains("start quiz") || lower.Contains("quiz") || lower.Contains("play quiz") || lower.Contains("test me"))
             {
                 return quizManager.StartQuiz();
             }
+
+    
 
             // 2. QUIZ ANSWER (number input)
             if (lower.Length == 1 && int.TryParse(lower, out int ans))

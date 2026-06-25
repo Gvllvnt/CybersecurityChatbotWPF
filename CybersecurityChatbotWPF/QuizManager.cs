@@ -16,6 +16,11 @@ namespace CybersecurityChatbotWPF
             LoadQuestions();
         }
 
+        public bool IsQuizActive()
+        {
+            return quizActive && currentQuestionIndex < 5;
+        }
+
         private void LoadQuestions()
         {
             questions = new List<QuizQuestion>
@@ -124,7 +129,7 @@ namespace CybersecurityChatbotWPF
             if (!quizActive)
                 return "Type 'start quiz' to begin the cybersecurity quiz!";
 
-            if (currentQuestionIndex >= 5) // Only 5 questions per round
+            if (currentQuestionIndex >= 5)
             {
                 quizActive = false;
                 string feedback = score >= 4 ? "🌟 Great job! You're a cybersecurity pro!" :
@@ -153,6 +158,7 @@ namespace CybersecurityChatbotWPF
 
             var q = questions[currentQuestionIndex];
             bool correct = answerIndex == q.CorrectIndex;
+
             if (correct)
             {
                 score++;
@@ -179,32 +185,29 @@ namespace CybersecurityChatbotWPF
             if (currentQuestionIndex >= 5)
                 return GetNextQuestion();
 
-            // Try to parse the input as a number
-            if (int.TryParse(input.Trim(), out int answerIndex))
+            string trimmed = input.Trim();
+            var q = questions[currentQuestionIndex];
+
+            // Try to parse as number
+            if (int.TryParse(trimmed, out int answerIndex))
             {
-                var q = questions[currentQuestionIndex];
                 if (answerIndex >= 1 && answerIndex <= q.Options.Count)
                 {
                     return SubmitAnswer(answerIndex - 1);
                 }
-                else
-                {
-                    return $"Please enter a number between 1 and {q.Options.Count}.";
-                }
+                return $"Please enter a number between 1 and {q.Options.Count}.";
             }
-            else
+
+            // Try to match by text
+            for (int i = 0; i < q.Options.Count; i++)
             {
-                // Check if user typed the actual answer text
-                var q = questions[currentQuestionIndex];
-                for (int i = 0; i < q.Options.Count; i++)
+                if (trimmed.Equals(q.Options[i], StringComparison.OrdinalIgnoreCase))
                 {
-                    if (input.Trim().Equals(q.Options[i], StringComparison.OrdinalIgnoreCase))
-                    {
-                        return SubmitAnswer(i);
-                    }
+                    return SubmitAnswer(i);
                 }
-                return $"Please enter the number of your choice (1-{q.Options.Count}) or type the answer text.";
             }
+
+            return $"Please enter the number of your choice (1-{q.Options.Count}) or type the answer text.";
         }
     }
 
