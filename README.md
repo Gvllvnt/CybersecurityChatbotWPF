@@ -187,13 +187,9 @@ GitHub Commits screenshot-commits.png
 
 📊 CI Status
 
-https://github.com/YOUR_USERNAME/CybersecurityChatbotWPF/actions/workflows/dotnet-desktop.yml/badge.svg
-
----
+https://github.com/Gvllvnt/CybersecurityChatbotWPF/actions/workflows/dotnet-desktop.yml/badge.svg
 
 
-
----
 
 📚 References
 
@@ -205,7 +201,6 @@ National Cyber Security Centre (2023) Phishing attacks: Spotting and avoiding sc
 
 South African Banking Risk Information Centre (SABRIC) (2024) Annual crime statistics: Digital banking fraud report. Available at: https://www.sabric.co.za (Accessed: 13 April 2026).
 
----
 
 👨‍💻 Author
 
