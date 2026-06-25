@@ -163,7 +163,7 @@ namespace CybersecurityChatbotWPF
                 logger.LogAction($"Quiz: Incorrect answer for Q{currentQuestionIndex + 1}");
             }
 
-            string result = correct ? "✅ Correct!" : $"❌ Incorrect. The answer was: {q.Options[q.CorrectIndex]}";
+            string result = correct ? "✅ Correct!" : $"❌ Incorrect. The correct answer was: {q.Options[q.CorrectIndex]}";
             result += $"\n📘 {q.Explanation}";
 
             currentQuestionIndex++;
@@ -173,12 +173,38 @@ namespace CybersecurityChatbotWPF
 
         public string SubmitAnswer(string input)
         {
-            if (int.TryParse(input, out int answerIndex))
+            if (!quizActive)
+                return "Type 'start quiz' to begin!";
+
+            if (currentQuestionIndex >= 5)
+                return GetNextQuestion();
+
+            // Try to parse the input as a number
+            if (int.TryParse(input.Trim(), out int answerIndex))
             {
-                if (answerIndex >= 1 && answerIndex <= 4)
+                var q = questions[currentQuestionIndex];
+                if (answerIndex >= 1 && answerIndex <= q.Options.Count)
+                {
                     return SubmitAnswer(answerIndex - 1);
+                }
+                else
+                {
+                    return $"Please enter a number between 1 and {q.Options.Count}.";
+                }
             }
-            return "Please enter the number of your choice (1, 2, 3, or 4).";
+            else
+            {
+                // Check if user typed the actual answer text
+                var q = questions[currentQuestionIndex];
+                for (int i = 0; i < q.Options.Count; i++)
+                {
+                    if (input.Trim().Equals(q.Options[i], StringComparison.OrdinalIgnoreCase))
+                    {
+                        return SubmitAnswer(i);
+                    }
+                }
+                return $"Please enter the number of your choice (1-{q.Options.Count}) or type the answer text.";
+            }
         }
     }
 

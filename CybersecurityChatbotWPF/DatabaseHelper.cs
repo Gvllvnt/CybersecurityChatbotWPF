@@ -1,53 +1,66 @@
-﻿using MySql.Data.MySqlClient;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 
 namespace CybersecurityChatbotWPF
 {
     public class DatabaseHelper
     {
-        private string connectionString = "Server=localhost;Database=cyberbot;Uid=root;Pwd=;";
+        // Connection string for Docker SQL Server
+        private string connectionString = "Server=localhost,1433;Database=cyberbot;User Id=sa;Password=YourStrong!Password123;TrustServerCertificate=True;";
+        private string masterConnection = "Server=localhost,1433;User Id=sa;Password=YourStrong!Password123;TrustServerCertificate=True;";
 
         public DatabaseHelper()
         {
             CreateDatabaseIfNotExists();
-            CreateTasksTable();
+            CreateTasksTableIfNotExists();
         }
 
         private void CreateDatabaseIfNotExists()
         {
-            string createDbQuery = "CREATE DATABASE IF NOT EXISTS cyberbot;";
-            string useDbQuery = "USE cyberbot;";
-
-            using (MySqlConnection conn = new MySqlConnection("Server=localhost;Uid=root;Pwd=;"))
+            try
             {
-                conn.Open();
-                MySqlCommand cmd = new MySqlCommand(createDbQuery, conn);
-                cmd.ExecuteNonQuery();
-                cmd.CommandText = useDbQuery;
-                cmd.ExecuteNonQuery();
-                conn.Close();
+                string query = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'cyberbot') CREATE DATABASE cyberbot;";
+                using (SqlConnection conn = new SqlConnection(masterConnection))
+                {
+                    conn.Open();
+                    SqlCommand cmd = new SqlCommand(query, conn);
+                    cmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Database creation error: {ex.Message}");
             }
         }
 
-        private void CreateTasksTable()
+        private void CreateTasksTableIfNotExists()
         {
-            string query = @"
-                CREATE TABLE IF NOT EXISTS tasks (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    title VARCHAR(255) NOT NULL,
-                    description TEXT,
-                    reminder_date DATETIME,
-                    is_completed BOOLEAN DEFAULT FALSE,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                );";
-
-            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            try
             {
-                conn.Open();
-                MySqlCommand cmd = new MySqlCommand(query, conn);
-                cmd.ExecuteNonQuery();
-                conn.Close();
+                string query = @"
+                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='tasks' AND xtype='U')
+                    CREATE TABLE tasks (
+                        id INT IDENTITY(1,1) PRIMARY KEY,
+                        title NVARCHAR(255) NOT NULL,
+                        description NVARCHAR(MAX),
+                        reminder_date DATETIME,
+                        is_completed BIT DEFAULT 0,
+                        created_at DATETIME DEFAULT GETDATE()
+                    );";
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    SqlCommand cmd = new SqlCommand(query, conn);
+                    cmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Table creation error: {ex.Message}");
             }
         }
 
@@ -57,10 +70,10 @@ namespace CybersecurityChatbotWPF
                 INSERT INTO tasks (title, description, reminder_date) 
                 VALUES (@title, @description, @reminderDate);";
 
-            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                MySqlCommand cmd = new MySqlCommand(query, conn);
+                SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@title", title);
                 cmd.Parameters.AddWithValue("@description", description ?? "");
                 cmd.Parameters.AddWithValue("@reminderDate", (object)reminderDate ?? DBNull.Value);
@@ -74,21 +87,21 @@ namespace CybersecurityChatbotWPF
             List<Task> tasks = new List<Task>();
             string query = "SELECT * FROM tasks ORDER BY created_at DESC;";
 
-            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                MySqlCommand cmd = new MySqlCommand(query, conn);
-                MySqlDataReader reader = cmd.ExecuteReader();
+                SqlCommand cmd = new SqlCommand(query, conn);
+                SqlDataReader reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
                     tasks.Add(new Task
                     {
-                        Id = reader.GetInt32("id"),
-                        Title = reader.GetString("title"),
-                        Description = reader.IsDBNull(reader.GetOrdinal("description")) ? "" : reader.GetString("description"),
-                        ReminderDate = reader.IsDBNull(reader.GetOrdinal("reminder_date")) ? (DateTime?)null : reader.GetDateTime("reminder_date"),
-                        IsCompleted = reader.GetBoolean("is_completed"),
-                        CreatedAt = reader.GetDateTime("created_at")
+                        Id = reader.GetInt32(0),
+                        Title = reader.GetString(1),
+                        Description = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        ReminderDate = reader.IsDBNull(3) ? (DateTime?)null : reader.GetDateTime(3),
+                        IsCompleted = reader.GetBoolean(4),
+                        CreatedAt = reader.GetDateTime(5)
                     });
                 }
                 conn.Close();
@@ -99,10 +112,10 @@ namespace CybersecurityChatbotWPF
         public void DeleteTask(int id)
         {
             string query = "DELETE FROM tasks WHERE id = @id;";
-            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                MySqlCommand cmd = new MySqlCommand(query, conn);
+                SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@id", id);
                 cmd.ExecuteNonQuery();
                 conn.Close();
@@ -111,11 +124,11 @@ namespace CybersecurityChatbotWPF
 
         public void MarkTaskCompleted(int id)
         {
-            string query = "UPDATE tasks SET is_completed = TRUE WHERE id = @id;";
-            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            string query = "UPDATE tasks SET is_completed = 1 WHERE id = @id;";
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                MySqlCommand cmd = new MySqlCommand(query, conn);
+                SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@id", id);
                 cmd.ExecuteNonQuery();
                 conn.Close();
@@ -131,5 +144,6 @@ namespace CybersecurityChatbotWPF
         public DateTime? ReminderDate { get; set; }
         public bool IsCompleted { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string Status => IsCompleted ? "✅ Completed" : "⏳ Pending";
     }
 }

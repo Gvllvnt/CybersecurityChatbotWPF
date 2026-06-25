@@ -1,5 +1,6 @@
 ﻿//WPF GUI for Cybersec chatbot
 using System;
+using System.Collections.Generic;
 using System.Media;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,13 +14,15 @@ namespace CybersecurityChatbotWPF
     public partial class MainWindow : Window
     {
         private ChatbotEngine bot = new ChatbotEngine();
-        private bool firstMessage = true;
+        private ActivityLogger logger = ActivityLogger.Instance;
 
         public MainWindow()
         {
             InitializeComponent();
             PlayVoiceGreeting();
             AppendBotMessage(bot.GetInitialGreeting());
+            RefreshTaskList();
+            RefreshActivityLog();
             UserInput.Focus();
         }
 
@@ -36,12 +39,10 @@ namespace CybersecurityChatbotWPF
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                AppendBotMessage("(Voice greeting not available)");
-            }
+            catch { }
         }
 
+        // === CHAT TAB ===
         private void SendButton_Click(object sender, RoutedEventArgs e)
         {
             SendMessage();
@@ -50,9 +51,7 @@ namespace CybersecurityChatbotWPF
         private void UserInput_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
-            {
                 SendMessage();
-            }
         }
 
         private void SendMessage()
@@ -64,21 +63,118 @@ namespace CybersecurityChatbotWPF
             AppendUserMessage(input);
             UserInput.Clear();
             UserInput.Focus();
-            StatusText.Text = "Bot is thinking...";
 
-            try
+            string response = bot.ProcessInput(input);
+            AppendBotMessage(response);
+
+            RefreshTaskList();
+            RefreshActivityLog();
+
+            if (response.Contains("start quiz") || response.Contains("Question"))
             {
-                string response = bot.ProcessInput(input);
-                AppendBotMessage(response);
-                StatusText.Text = "Ready to help you stay safe online!";
-            }
-            catch (Exception ex)
-            {
-                AppendBotMessage("Oops! Something went wrong. Please try again.");
-                StatusText.Text = "Error occurred. Please try again.";
+                AppendQuizMessage(response);
             }
         }
 
+        // === TASK TAB ===
+        private void AddTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            string task = TaskInput.Text.Trim();
+            if (string.IsNullOrEmpty(task))
+            {
+                TaskStatus.Text = "Please enter a task!";
+                return;
+            }
+
+            string response = bot.ProcessInput($"Add task: {task}");
+            AppendBotMessage(response);
+            TaskInput.Clear();
+            TaskStatus.Text = "✅ Task added!";
+            RefreshTaskList();
+            RefreshActivityLog();
+        }
+
+        private void RefreshTaskList()
+        {
+            // Get tasks from database via chatbot
+            string tasks = bot.ProcessInput("view tasks");
+            TaskList.Items.Clear();
+            // Simple display - you can enhance this
+            var taskItems = tasks.Split('\n');
+            foreach (var item in taskItems)
+            {
+                if (!string.IsNullOrWhiteSpace(item))
+                    TaskList.Items.Add(new { Title = item, Description = "", Status = "" });
+            }
+        }
+
+        // === QUIZ TAB ===
+        private void QuizSendButton_Click(object sender, RoutedEventArgs e)
+        {
+            SendQuizAnswer();
+        }
+
+        private void QuizInput_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                SendQuizAnswer();
+                e.Handled = true;
+            }
+        }
+
+        private void SendQuizAnswer()
+        {
+            string input = QuizInput.Text.Trim();
+            if (string.IsNullOrEmpty(input))
+                return;
+
+            string response = bot.ProcessInput(input);
+            AppendQuizMessage(response);
+            QuizInput.Clear();
+            RefreshActivityLog();
+        }
+
+        private void AppendQuizMessage(string message)
+        {
+            QuizDisplay.Dispatcher.Invoke(() =>
+            {
+                var paragraph = new Paragraph();
+                var run = new Run($"Bot: {message}")
+                {
+                    Foreground = new SolidColorBrush(Colors.LightGreen)
+                };
+                paragraph.Inlines.Add(run);
+                QuizDisplay.Document.Blocks.Add(paragraph);
+                QuizDisplay.ScrollToEnd();
+            });
+        }
+
+        // === ACTIVITY LOG TAB ===
+        private void RefreshActivityLog()
+        {
+            ActivityLogList.Items.Clear();
+            string log = logger.GetLogSummary(20);
+            var entries = log.Split('\n');
+            foreach (var entry in entries)
+            {
+                if (!string.IsNullOrWhiteSpace(entry))
+                    ActivityLogList.Items.Add(entry);
+            }
+        }
+
+        private void RefreshLogButton_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshActivityLog();
+        }
+
+        private void ClearLogButton_Click(object sender, RoutedEventArgs e)
+        {
+            logger.ClearLog();
+            RefreshActivityLog();
+        }
+
+        // === CHAT DISPLAY HELPERS ===
         private void AppendUserMessage(string message)
         {
             AppendMessage($"You: {message}", Colors.LightBlue, true);
@@ -101,8 +197,6 @@ namespace CybersecurityChatbotWPF
                 };
                 paragraph.Inlines.Add(run);
                 ChatDisplay.Document.Blocks.Add(paragraph);
-
-                // Auto-scroll to bottom
                 ChatScrollViewer.ScrollToBottom();
             });
         }
